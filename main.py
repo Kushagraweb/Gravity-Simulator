@@ -114,7 +114,7 @@ def is_valid_number(value):
         float(value)
         return True
     except ValueError:
-        value = 0
+        value=0
 
 
 # Default particle settings
@@ -211,7 +211,7 @@ while running:
                         if input_buffer == "":
                             inputs[selected_input] = 0
                         else:
-                            inputs[selected_input:int] = float(input_buffer)
+                            inputs[selected_input] = float(input_buffer)
                             input_buffer = ""
                         print(f"Input buffer: {input_buffer}")  # Debug statement
                     else:
@@ -221,7 +221,7 @@ while running:
                         if input_buffer == "":
                             inputs[selected_input] = 0
                         else:
-                            inputs[selected_input:int] = float(input_buffer)
+                            inputs[selected_input] = float(input_buffer)
                     else:
                         inputs[selected_input] = 0
                         input_buffer = ""
@@ -233,7 +233,7 @@ while running:
                         if input_buffer == "":
                             inputs[selected_input] = 0
                         else:
-                            inputs[selected_input:int] = float(input_buffer)
+                            inputs[selected_input] = float(input_buffer)
                     else:
                         inputs[selected_input] = 0
                         input_buffer = ""
