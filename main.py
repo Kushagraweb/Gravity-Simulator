@@ -9,7 +9,7 @@ pygame.init()
 WIDTH, HEIGHT = 1053, 600
 SIM_WIDTH = 800  # Width of the simulation area
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Gravity Simulator with Sidebar")
+pygame.display.set_caption("Gravity Simulator")
 
 # Colors
 BLACK = (0, 0, 0)
@@ -24,7 +24,6 @@ HIGHLIGHT = (255, 255, 153)  # Highlight color for selected input
 font = pygame.font.SysFont(None, 24)
 
 
-
 # Particle class
 class Particle:
     def __init__(self, x, y, mass, radius, color=None):
@@ -32,8 +31,7 @@ class Particle:
         self.y = y
         self.mass = mass
         self.radius = radius
-        self.color = color if color else [
-            random.randint(50, 255) for _ in range(3)]
+        self.color = color if color else [random.randint(50, 255) for _ in range(3)]
         self.vx = 0
         self.vy = 0
         self.trail = []
@@ -60,12 +58,10 @@ class Particle:
             self.trail.pop(0)
 
     def draw(self, screen):
-        pygame.draw.circle(screen, self.color,
-                           (int(self.x), int(self.y)), self.radius)
+        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
         if len(self.trail) > 1:
             pygame.draw.lines(
-                screen, self.color, False, [
-                    (int(x), int(y)) for x, y in self.trail], 2
+                screen, self.color, False, [(int(x), int(y)) for x, y in self.trail], 2
             )
 
     def is_clicked(self, mouse_pos):
@@ -95,34 +91,13 @@ def draw_sidebar(
     for i, label in enumerate(labels):
         color = RED if i == selected_input else BLACK
         bg_color = HIGHLIGHT if i == selected_input else GRAY
-        pygame.draw.rect(screen, bg_color,
-                         (SIM_WIDTH + 10, 40 + i * 40, 180, 30))
+        pygame.draw.rect(screen, bg_color, (SIM_WIDTH + 10, 40 + i * 40, 180, 30))
         text = font.render(f"{label} {inputs[i]}", True, color)
         screen.blit(text, (SIM_WIDTH + 20, 50 + i * 40))
 
-        if i == selected_input and input_active:
-            # Render text to a surface
-            text_surface = font.render(
-                input_buffer, True, (255, 0, 255)
-            )  # Render with solid color
-
-            # Create a new surface for transparency
-            transparent_surface = pygame.Surface(
-                text_surface.get_size(), pygame.SRCALPHA
-            )
-            transparent_surface.blit(text_surface, (0, 0))
-
-            # Set the transparency (alpha value from 0 to 255)
-            transparent_surface.set_alpha(0)
-
-            # Blit the transparent surface onto the main screen
-            screen.blit(transparent_surface,
-                        (SIM_WIDTH + 20, 50 + selected_input * 40))
-
         # Highlight invalid input
         if i == selected_input and input_active and not is_valid_number(input_buffer):
-            pygame.draw.rect(
-                screen, RED, (SIM_WIDTH + 10, 40 + i * 40, 180, 30), 2)
+            pygame.draw.rect(screen, RED, (SIM_WIDTH + 10, 40 + i * 40, 180, 30), 2)
 
     # Display instructions
     for i, line in enumerate(instructions):
@@ -182,8 +157,7 @@ while running:
     # Draw preview particle
     preview_particle.draw(screen)
     pygame.draw.line(
-        screen, BLUE, (preview_particle.x,
-                       preview_particle.y), (mouse_x, mouse_y), 2
+        screen, BLUE, (preview_particle.x, preview_particle.y), (mouse_x, mouse_y), 2
     )
 
     for event in pygame.event.get():
@@ -193,7 +167,6 @@ while running:
                 selected_input = i
                 input_active = True
                 input_buffer = str(inputs[selected_input])
-                print(f"Selected input {i}")  # Debug statement
                 onetime = 1
                 break
         if event.type == pygame.QUIT:
@@ -204,12 +177,12 @@ while running:
                     dragging = True
                 for i in range(len(inputs)):
                     input_rect = pygame.Rect(
-                        SIM_WIDTH + 10, 40 + i * 40, 180, 30)
+                        SIM_WIDTH + 10, 40 + i * 40, 180, 30
+                    )
                     if input_rect.collidepoint(event.pos):
                         selected_input = i
                         input_active = True
                         input_buffer = str(inputs[selected_input])
-                        print(f"Selected input {i}")  # Debug statement
                         break
             elif event.button == 3:  # Right click
                 angle = math.atan2(mouse_y - y, mouse_x - x)
@@ -240,46 +213,44 @@ while running:
                 paused = not paused
             elif input_active:
                 if event.key == pygame.K_BACKSPACE:
-                    input_buffer = input_buffer[:-1]
+                    input_buffer = input_buffer[:-1]  # Remove last character
+                elif event.key in (pygame.K_RETURN, pygame.K_ESCAPE):  # Confirm input
                     if is_valid_number(input_buffer):
-                        if input_buffer == "":
-                            inputs[selected_input] = 0
-                        else:
-                            inputs[selected_input] = float(input_buffer)
-                            input_buffer = ""
-                        # Debug statement
-                        print(f"Input buffer: {input_buffer}")
+                        inputs[selected_input] = float(input_buffer)
                     else:
-                        inputs[selected_input] = 0
-                elif event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
-                    if is_valid_number(input_buffer):
-                        if input_buffer == "":
-                            inputs[selected_input] = 0
-                        else:
-                            inputs[selected_input] = float(input_buffer)
-                    else:
-                        inputs[selected_input] = 0
-                        input_buffer = ""
+                        input_buffer = str(inputs[selected_input])  # Reset to valid state
                     input_active = False
-                    print(f"Input buffer: {input_buffer}")  # Debug statement
                 else:
                     input_buffer += event.unicode
-                    if is_valid_number(input_buffer):
-                        if input_buffer == "":
-                            inputs[selected_input] = 0
-                        else:
-                            inputs[selected_input] = float(input_buffer)
-                    else:
-                        inputs[selected_input] = 0
-                        input_buffer = ""
-                    print(f"Input buffer: {input_buffer}")  # Debug statement
+
+                # Validate and update the input
+                if is_valid_number(input_buffer):
+                    inputs[selected_input] = float(input_buffer)
+                else:
+                    inputs[selected_input] = 0  # Default value for invalid input
+
         elif event.type == pygame.MOUSEWHEEL:
             inputs[3] = max(1, min(inputs[3] + event.y, 200))
 
     # Update particles if not paused
     if not paused:
-        for particle in particles:
+        for particle in particles[:]:
             particle.update(particles)
+
+        # Collision detection
+        for particle in particles[:]:
+            for other in particles[:]:
+                if particle != other:
+                    dx = other.x - particle.x
+                    dy = other.y - particle.y
+                    distance = math.sqrt(dx**2 + dy**2)
+                    if distance <= particle.radius + other.radius:
+                        if particle.mass >= other.mass:
+                            particle.mass += other.mass
+                            particle.radius = int(
+                                math.sqrt(particle.radius**2 + other.radius**2)
+                            )
+                            particles.remove(other)
 
     # Draw all particles
     for particle in particles:
