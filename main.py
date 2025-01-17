@@ -1,5 +1,5 @@
 import math
-
+import random
 import pygame
 
 # Initialize Pygame
@@ -24,25 +24,28 @@ HIGHLIGHT = (255, 255, 153)  # Highlight color for selected input
 font = pygame.font.SysFont(None, 24)
 
 
+
 # Particle class
 class Particle:
-    def __init__(self, x, y, mass, radius, color=WHITE):
+    def __init__(self, x, y, mass, radius, color=None):
         self.x = x
         self.y = y
         self.mass = mass
         self.radius = radius
-        self.color = color
+        self.color = color if color else [
+            random.randint(50, 255) for _ in range(3)]
         self.vx = 0
         self.vy = 0
+        self.trail = []
 
     def update(self, particles, G=1):
         for particle in particles:
             if particle != self:
                 dx = particle.x - self.x
                 dy = particle.y - self.y
-                distance = math.sqrt(dx ** 2 + dy ** 2)
+                distance = math.sqrt(dx**2 + dy**2)
                 if distance > 5:
-                    force = G * self.mass * particle.mass / distance ** 2
+                    force = G * self.mass * particle.mass / distance**2
                     angle = math.atan2(dy, dx)
                     fx = force * math.cos(angle)
                     fy = force * math.sin(angle)
@@ -52,48 +55,74 @@ class Particle:
         self.x += self.vx
         self.y += self.vy
 
+        self.trail.append((self.x, self.y))
+        if len(self.trail) > 50:  # Limit trail length
+            self.trail.pop(0)
+
     def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
+        pygame.draw.circle(screen, self.color,
+                           (int(self.x), int(self.y)), self.radius)
+        if len(self.trail) > 1:
+            pygame.draw.lines(
+                screen, self.color, False, [
+                    (int(x), int(y)) for x, y in self.trail], 2
+            )
 
     def is_clicked(self, mouse_pos):
         dx = mouse_pos[0] - self.x
         dy = mouse_pos[1] - self.y
-        return math.sqrt(dx ** 2 + dy ** 2) <= self.radius
+        return math.sqrt(dx**2 + dy**2) <= self.radius
 
 
 # Functions for drawing and handling the sidebar
-def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, paused, fps):
+def draw_sidebar(
+    screen, inputs, selected_input, input_active, input_buffer, paused, fps
+):
     pygame.draw.rect(screen, GRAY, (SIM_WIDTH, 0, WIDTH - SIM_WIDTH, HEIGHT))
     labels = ["X:", "Y:", "Mass:", "Radius:", "Velocity:"]
-    instructions = ["Controls:", "  - Arrows: Select input", "  - Enter: Confirm input", "  - Backspace: Clear input",
-                    "  - Scroll: Adjust radius", "  - Space: Pause/Resume", "  - Right Click: Add particle",
-                    "  - Middle Click: Delete particle", ]
+    instructions = [
+        "Controls:",
+        "  - Arrows: Select input",
+        "  - Enter: Confirm input",
+        "  - Backspace: Clear input",
+        "  - Scroll: Adjust radius",
+        "  - Space: Pause/Resume",
+        "  - Right Click: Add particle",
+        "  - Middle Click: Delete particle",
+    ]
 
     # Draw input fields
     for i, label in enumerate(labels):
         color = RED if i == selected_input else BLACK
         bg_color = HIGHLIGHT if i == selected_input else GRAY
-        pygame.draw.rect(screen, bg_color, (SIM_WIDTH + 10, 40 + i * 40, 180, 30))
+        pygame.draw.rect(screen, bg_color,
+                         (SIM_WIDTH + 10, 40 + i * 40, 180, 30))
         text = font.render(f"{label} {inputs[i]}", True, color)
         screen.blit(text, (SIM_WIDTH + 20, 50 + i * 40))
 
         if i == selected_input and input_active:
             # Render text to a surface
-            text_surface = font.render(input_buffer, True, (255, 0, 255))  # Render with solid color
+            text_surface = font.render(
+                input_buffer, True, (255, 0, 255)
+            )  # Render with solid color
 
             # Create a new surface for transparency
-            transparent_surface = pygame.Surface(text_surface.get_size(), pygame.SRCALPHA)
+            transparent_surface = pygame.Surface(
+                text_surface.get_size(), pygame.SRCALPHA
+            )
             transparent_surface.blit(text_surface, (0, 0))
 
             # Set the transparency (alpha value from 0 to 255)
             transparent_surface.set_alpha(0)
 
             # Blit the transparent surface onto the main screen
-            screen.blit(transparent_surface, (SIM_WIDTH + 20, 50 + selected_input * 40))
+            screen.blit(transparent_surface,
+                        (SIM_WIDTH + 20, 50 + selected_input * 40))
 
         # Highlight invalid input
         if i == selected_input and input_active and not is_valid_number(input_buffer):
-            pygame.draw.rect(screen, RED, (SIM_WIDTH + 10, 40 + i * 40, 180, 30), 2)
+            pygame.draw.rect(
+                screen, RED, (SIM_WIDTH + 10, 40 + i * 40, 180, 30), 2)
 
     # Display instructions
     for i, line in enumerate(instructions):
@@ -101,7 +130,9 @@ def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, pau
         screen.blit(text, (SIM_WIDTH + 10, 300 + i * 20))
 
     # Display pause button
-    pause_text = font.render("Paused" if paused else "Running", True, RED if paused else BLUE)
+    pause_text = font.render(
+        "Paused" if paused else "Running", True, RED if paused else BLUE
+    )
     screen.blit(pause_text, (SIM_WIDTH + 10, HEIGHT - 40))
 
     # Display FPS
@@ -114,7 +145,7 @@ def is_valid_number(value):
         float(value)
         return True
     except ValueError:
-        value=0
+        return False
 
 
 # Default particle settings
@@ -150,7 +181,10 @@ while running:
 
     # Draw preview particle
     preview_particle.draw(screen)
-    pygame.draw.line(screen, BLUE, (preview_particle.x, preview_particle.y), (mouse_x, mouse_y), 2)
+    pygame.draw.line(
+        screen, BLUE, (preview_particle.x,
+                       preview_particle.y), (mouse_x, mouse_y), 2
+    )
 
     for event in pygame.event.get():
         while onetime == 0:
@@ -169,7 +203,8 @@ while running:
                 if preview_particle.is_clicked((mouse_x, mouse_y)):
                     dragging = True
                 for i in range(len(inputs)):
-                    input_rect = pygame.Rect(SIM_WIDTH + 10, 40 + i * 40, 180, 30)
+                    input_rect = pygame.Rect(
+                        SIM_WIDTH + 10, 40 + i * 40, 180, 30)
                     if input_rect.collidepoint(event.pos):
                         selected_input = i
                         input_active = True
@@ -180,7 +215,7 @@ while running:
                 angle = math.atan2(mouse_y - y, mouse_x - x)
                 vx = velocity * math.cos(angle)
                 vy = velocity * math.sin(angle)
-                particle = Particle(x, y, mass, radius, WHITE)
+                particle = Particle(x, y, mass, radius)
                 particle.vx = vx
                 particle.vy = vy
                 particles.append(particle)
@@ -188,7 +223,6 @@ while running:
                 for particle in particles[:]:
                     if particle.is_clicked((mouse_x, mouse_y)):
                         particles.remove(particle)
-
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
@@ -213,7 +247,8 @@ while running:
                         else:
                             inputs[selected_input] = float(input_buffer)
                             input_buffer = ""
-                        print(f"Input buffer: {input_buffer}")  # Debug statement
+                        # Debug statement
+                        print(f"Input buffer: {input_buffer}")
                     else:
                         inputs[selected_input] = 0
                 elif event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
@@ -251,7 +286,9 @@ while running:
         particle.draw(screen)
 
     # Draw sidebar
-    draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, paused, fps)
+    draw_sidebar(
+        screen, inputs, selected_input, input_active, input_buffer, paused, fps
+    )
 
     pygame.display.flip()
     clock.tick(60)
