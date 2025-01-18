@@ -6,8 +6,8 @@ import pygame
 pygame.init()
 
 # Screen dimensions and settings
-WIDTH, HEIGHT = 1053, 600
-SIM_WIDTH = 800  # Width of the simulation area
+WIDTH, HEIGHT = 1300, 800
+SIM_WIDTH = 1000  # Width of the simulation area
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Gravity Simulator")
 
