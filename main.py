@@ -18,6 +18,7 @@ GRAY = (200, 200, 200)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
 HIGHLIGHT = (255, 255, 153)  # Highlight color for selected input
 
 # Font
@@ -39,34 +40,67 @@ class Particle:
         self.trail = []
 
     def update(self, particles, G=1):
+        # Apply gravitational forces
         for particle in particles:
             if particle != self:
                 dx = particle.x - self.x
                 dy = particle.y - self.y
-                distance = math.sqrt(dx**2 + dy**2)
+                distance = math.sqrt(dx ** 2 + dy ** 2)
                 if distance > 5:
-                    force = G * self.mass * particle.mass / distance**2
+                    force = G * self.mass * particle.mass / distance ** 2
                     angle = math.atan2(dy, dx)
                     fx = force * math.cos(angle)
                     fy = force * math.sin(angle)
                     self.vx += fx / self.mass
                     self.vy += fy / self.mass
 
+        # Update position
         self.x += self.vx
         self.y += self.vy
 
+        # Check for screen wrapping
+        teleported = False
+        if self.x < 0:
+            self.x += SIM_WIDTH
+            teleported = True
+        elif self.x >= SIM_WIDTH:
+            self.x -= SIM_WIDTH
+            teleported = True
+
+        if self.y < 0:
+            self.y += HEIGHT
+            teleported = True
+        elif self.y >= HEIGHT:
+            self.y -= HEIGHT
+            teleported = True
+
+        # Reset trail if teleported
+        if teleported:
+            self.trail = []
+
+        # Update trail
         self.trail.append((self.x, self.y))
         if len(self.trail) > 50:  # Limit trail length
             self.trail.pop(0)
 
     def draw(self, screen):
-        pygame.draw.circle(screen, self.color,
-                           (int(self.x), int(self.y)), self.radius)
+        # Draw the particle
+        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
+
+        # Draw the trail with transparency
         if len(self.trail) > 1:
-            pygame.draw.lines(
-                screen, self.color, False, [
-                    (int(x), int(y)) for x, y in self.trail], 2
-            )
+            trail_surface = pygame.Surface(screen.get_size(), pygame.SRCALPHA)  # Transparent surface
+            for i in range(1, len(self.trail)):
+                alpha = int(255 * (i / len(self.trail)))  # Transparency gradient
+                trail_color = (*self.color, alpha)
+                pygame.draw.line(
+                    trail_surface,
+                    trail_color,
+                    (int(self.trail[i - 1][0]), int(self.trail[i - 1][1])),
+                    (int(self.trail[i][0]), int(self.trail[i][1])),
+                    2
+                )
+            screen.blit(trail_surface, (0, 0))
 
     def is_clicked(self, mouse_pos):
         dx = mouse_pos[0] - self.x
@@ -149,7 +183,7 @@ def is_valid_number(value):
 
 
 # Default particle settings
-default_inputs = [400, 300, 5, 5, 5]  # x, y, mass, radius, velocity
+default_inputs = [400, 300, 5, 25, 5]  # x, y, mass, radius, velocity
 inputs = default_inputs[:]
 
 # Other state variables
@@ -164,6 +198,13 @@ dragging = False
 running = True
 clock = pygame.time.Clock()
 onetime = 0
+
+# Create a central "sun" and orbiting "planet"
+particles.append(Particle(400, 300, 3500, 20, YELLOW))  # Sun
+planet = Particle(400, 150, 1, 5, BLUE)
+planet.vx = 5  # Give the planet an initial velocity for orbit
+particles.append(planet)
+
 while running:
     screen.fill(BLACK)
 
