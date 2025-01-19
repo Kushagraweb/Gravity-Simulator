@@ -24,7 +24,7 @@ HIGHLIGHT = (255, 255, 153)  # Highlight color for selected input
 # Font
 font = pygame.font.SysFont(None, 24)
 
-
+grid_spacing:int=50
 G=1
 on_vector=True
 # Particle class
@@ -146,10 +146,24 @@ def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, pau
     g_text = font.render(f"G: {G:.2f}", True, BLACK)
     screen.blit(g_text, (SIM_WIDTH + 20, slider_y + 20))
 
+    # Draw vector density slider
+    vsslider_x = SIM_WIDTH + 10
+    vsslider_y = 290
+    vsslider_width = 180
+    vsslider_height = 10
+    vsslider_value_x = vsslider_x + int((grid_spacing - 10) / (100 - 10) * vsslider_width)
+
+    pygame.draw.rect(screen, BLACK, (vsslider_x, vsslider_y, vsslider_width, vsslider_height))
+    pygame.draw.circle(screen, RED, (vsslider_value_x, vsslider_y + vsslider_height // 2), 8)
+
+    g_text = font.render(f"Vector Density: {grid_spacing}", True, BLACK)
+    screen.blit(g_text, (SIM_WIDTH + 20, vsslider_y + 20))
+
+
     # Display instructions
     for i, line in enumerate(instructions):
         text = font.render(line, True, BLACK)
-        screen.blit(text, (SIM_WIDTH + 10, 300 + i * 20))
+        screen.blit(text, (SIM_WIDTH + 10, 350 + i * 20))
 
 
 
@@ -163,7 +177,7 @@ def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, pau
     screen.blit(fps_text, (SIM_WIDTH + 120, HEIGHT - 40))
 
     # Draw checkbox for vector field
-    checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 500, 20, 20)
+    checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 550, 20, 20)
     pygame.draw.rect(screen, BLACK, checkbox_rect, 2)
     if on_vector:
         pygame.draw.line(screen, BLACK, (checkbox_rect.left + 4, checkbox_rect.centery),
@@ -173,10 +187,15 @@ def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, pau
     checkbox_label = font.render("Show Vector Field", True, BLACK)
     screen.blit(checkbox_label, (checkbox_rect.right + 10, checkbox_rect.top))
 
-def draw_vector_field(screen, particles, G, grid_spacing=50):
-    for x in range(0, SIM_WIDTH, grid_spacing):
-        for y in range(0, HEIGHT, grid_spacing):
+
+def draw_vector_field(screen, particles, G, grid_spacing):
+    for x in range(0, SIM_WIDTH, int(grid_spacing)):
+        for y in range(0, HEIGHT, int(grid_spacing)):
+            max_force = 0
+            max_force_particle = None
             force_x, force_y = 0, 0
+
+            # Calculate the total force at this grid point from all particles
             for particle in particles:
                 dx = particle.x - x
                 dy = particle.y - y
@@ -186,6 +205,11 @@ def draw_vector_field(screen, particles, G, grid_spacing=50):
                     angle = math.atan2(dy, dx)
                     force_x += force * math.cos(angle)
                     force_y += force * math.sin(angle)
+
+                    # Track the particle exerting the maximum force
+                    if force > max_force:
+                        max_force = force
+                        max_force_particle = particle
 
             # Normalize vector for consistent display
             magnitude = math.sqrt(force_x ** 2 + force_y ** 2)
@@ -198,9 +222,12 @@ def draw_vector_field(screen, particles, G, grid_spacing=50):
             end_x = x + force_x * arrow_length
             end_y = y + force_y * arrow_length
 
+            # Use the color of the particle with the maximum force exerted at this point
+            vector_color = max_force_particle.color if max_force_particle else WHITE
+
             # Draw the arrow
-            pygame.draw.line(screen, WHITE, (x, y), (end_x, end_y), 1)
-            pygame.draw.circle(screen, WHITE, (int(end_x), int(end_y)), 2)
+            pygame.draw.line(screen, vector_color, (x, y), (end_x, end_y), 1)
+            pygame.draw.circle(screen, vector_color, (int(end_x), int(end_y)), 2)
 
 
 def is_valid_number(value):
@@ -223,6 +250,7 @@ paused = False
 particles = []
 dragging = False
 g_slider_dragging = False
+vsslider_dragging = False
 
 # Main loop
 running = True
@@ -230,8 +258,8 @@ clock = pygame.time.Clock()
 onetime = 0
 
 # Create a central "sun" and orbiting "planet"
-particles.append(Particle(400, 300, 3500, 20, YELLOW))  # Sun
-planet = Particle(400, 150, 1, 5, BLUE)
+particles.append(Particle(470, 365, 3500, 20, YELLOW))  # Sun
+planet = Particle(470, 215, 1, 5, BLUE)
 planet.vx = 5  # Give the planet an initial velocity for orbit
 particles.append(planet)
 
@@ -272,16 +300,26 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left click
                 slider_rect = pygame.Rect(SIM_WIDTH + 10, 240, 180, 10)
+                vsslider_rect = pygame.Rect(SIM_WIDTH + 10, 290, 180, 10)
                 handle_x = SIM_WIDTH + 10 + int((G - 0.1) / (5.0 - 0.1) * 180)
                 handle_rect = pygame.Rect(handle_x - 8, 240 - 8, 16, 26)  # Handle area
+
+                vshandle_x =SIM_WIDTH + 10 + int((grid_spacing - 10) / (100 - 10) * 180)
+                vshandle_rect = pygame.Rect(vshandle_x - 8, 290 - 8, 16, 26)  # Handle area
+
                 checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 500, 20, 20)
                 if checkbox_rect.collidepoint(event.pos):
                     on_vector = not on_vector
                 if handle_rect.collidepoint(event.pos):
                     g_slider_dragging = True
+                if vshandle_rect.collidepoint(event.pos):
+                    vsslider_dragging = True
                 if slider_rect.collidepoint(event.pos):
                     slider_value = (event.pos[0] - slider_rect.x) / slider_rect.width
                     G = max(0.1, min(slider_value * (5.0 - 0.1) + 0.1, 5.0))
+                if vsslider_rect.collidepoint(event.pos):
+                    vsslider_value = (event.pos[0] - vsslider_rect.x) / vsslider_rect.width
+                    grid_spacing = max(10, min(vsslider_value * (100 - 10) + 10, 100))
                 if preview_particle.is_clicked((mouse_x, mouse_y)):
                     dragging = True
                 for i in range(len(inputs)):
@@ -310,6 +348,7 @@ while running:
             if event.button == 1:
                 dragging = False
                 g_slider_dragging = False
+                vsslider_dragging=False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_DOWN:
                 selected_input: int = (selected_input + 1) % len(inputs)
@@ -362,6 +401,11 @@ while running:
                 slider_rect = pygame.Rect(SIM_WIDTH + 10, 240, 180, 10)
                 relative_x = max(0, min(event.pos[0] - slider_rect.x, slider_rect.width))
                 G = 0.1 + (relative_x / slider_rect.width) * (5.0 - 0.1)
+            if vsslider_dragging:
+                # Adjust vector spacing based on mouse position
+                vsslider_rect = pygame.Rect(SIM_WIDTH + 10, 290, 180, 10)
+                vsrelative_x = max(0, min(event.pos[0] - vsslider_rect.x, vsslider_rect.width))
+                grid_spacing = 10 + (vsrelative_x / vsslider_rect.width) * (100 - 10)
 
     # Update particles if not paused
     if not paused:
@@ -389,7 +433,7 @@ while running:
 
     # Draw the vector field
     if on_vector:
-        draw_vector_field(screen, particles, G, grid_spacing=50)
+        draw_vector_field(screen, particles, G, grid_spacing)
     else:
         pass
 
