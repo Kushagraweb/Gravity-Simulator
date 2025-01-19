@@ -25,7 +25,8 @@ HIGHLIGHT = (255, 255, 153)  # Highlight color for selected input
 font = pygame.font.SysFont(None, 24)
 
 
-
+G=1
+on_vector=True
 # Particle class
 class Particle:
     def __init__(self, x, y, mass, radius, color=None):
@@ -39,7 +40,8 @@ class Particle:
         self.vy = 0
         self.trail = []
 
-    def update(self, particles, G=1):
+    def update(self, particles,G):
+
         # Apply gravitational forces
         for particle in particles:
             if particle != self:
@@ -109,9 +111,7 @@ class Particle:
 
 
 # Functions for drawing and handling the sidebar
-def draw_sidebar(
-    screen, inputs, selected_input, input_active, input_buffer, paused, fps
-):
+def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, paused, fps, G):
     pygame.draw.rect(screen, GRAY, (SIM_WIDTH, 0, WIDTH - SIM_WIDTH, HEIGHT))
     labels = ["X:", "Y:", "Mass:", "Radius:", "Velocity:"]
     instructions = [
@@ -129,49 +129,78 @@ def draw_sidebar(
     for i, label in enumerate(labels):
         color = RED if i == selected_input else BLACK
         bg_color = HIGHLIGHT if i == selected_input else GRAY
-        pygame.draw.rect(screen, bg_color,
-                         (SIM_WIDTH + 10, 40 + i * 40, 180, 30))
+        pygame.draw.rect(screen, bg_color, (SIM_WIDTH + 10, 40 + i * 40, 180, 30))
         text = font.render(f"{label} {inputs[i]}", True, color)
         screen.blit(text, (SIM_WIDTH + 20, 50 + i * 40))
 
-        if i == selected_input and input_active:
-            # Render text to a surface
-            text_surface = font.render(
-                input_buffer, True, (255, 0, 255)
-            )  # Render with solid color
+    # Draw G slider
+    slider_x = SIM_WIDTH + 10
+    slider_y = 240
+    slider_width = 180
+    slider_height = 10
+    slider_value_x = slider_x + int((G - 0.1) / (5.0 - 0.1) * slider_width)
 
-            # Create a new surface for transparency
-            transparent_surface = pygame.Surface(
-                text_surface.get_size(), pygame.SRCALPHA
-            )
-            transparent_surface.blit(text_surface, (0, 0))
+    pygame.draw.rect(screen, BLACK, (slider_x, slider_y, slider_width, slider_height))
+    pygame.draw.circle(screen, RED, (slider_value_x, slider_y + slider_height // 2), 8)
 
-            # Set the transparency (alpha value from 0 to 255)
-            transparent_surface.set_alpha(0)
-
-            # Blit the transparent surface onto the main screen
-            screen.blit(transparent_surface,
-                        (SIM_WIDTH + 20, 50 + selected_input * 40))
-
-        # Highlight invalid input
-        if i == selected_input and input_active and not is_valid_number(input_buffer):
-            pygame.draw.rect(
-                screen, RED, (SIM_WIDTH + 10, 40 + i * 40, 180, 30), 2)
+    g_text = font.render(f"G: {G:.2f}", True, BLACK)
+    screen.blit(g_text, (SIM_WIDTH + 20, slider_y + 20))
 
     # Display instructions
     for i, line in enumerate(instructions):
         text = font.render(line, True, BLACK)
         screen.blit(text, (SIM_WIDTH + 10, 300 + i * 20))
 
+
+
+
     # Display pause button
-    pause_text = font.render(
-        "Paused" if paused else "Running", True, RED if paused else BLUE
-    )
+    pause_text = font.render("Paused" if paused else "Running", True, RED if paused else BLUE)
     screen.blit(pause_text, (SIM_WIDTH + 10, HEIGHT - 40))
 
     # Display FPS
     fps_text = font.render(f"FPS: {int(fps)}", True, BLACK)
     screen.blit(fps_text, (SIM_WIDTH + 120, HEIGHT - 40))
+
+    # Draw checkbox for vector field
+    checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 500, 20, 20)
+    pygame.draw.rect(screen, BLACK, checkbox_rect, 2)
+    if on_vector:
+        pygame.draw.line(screen, BLACK, (checkbox_rect.left + 4, checkbox_rect.centery),
+                         (checkbox_rect.centerx, checkbox_rect.bottom - 4), 2)
+        pygame.draw.line(screen, BLACK, (checkbox_rect.centerx, checkbox_rect.bottom - 4),
+                         (checkbox_rect.right - 4, checkbox_rect.top + 4), 2)
+    checkbox_label = font.render("Show Vector Field", True, BLACK)
+    screen.blit(checkbox_label, (checkbox_rect.right + 10, checkbox_rect.top))
+
+def draw_vector_field(screen, particles, G, grid_spacing=50):
+    for x in range(0, SIM_WIDTH, grid_spacing):
+        for y in range(0, HEIGHT, grid_spacing):
+            force_x, force_y = 0, 0
+            for particle in particles:
+                dx = particle.x - x
+                dy = particle.y - y
+                distance = math.sqrt(dx ** 2 + dy ** 2)
+                if distance > 5:  # Avoid division by zero or excessive force
+                    force = G * particle.mass / distance ** 2
+                    angle = math.atan2(dy, dx)
+                    force_x += force * math.cos(angle)
+                    force_y += force * math.sin(angle)
+
+            # Normalize vector for consistent display
+            magnitude = math.sqrt(force_x ** 2 + force_y ** 2)
+            if magnitude > 0:
+                force_x /= magnitude
+                force_y /= magnitude
+
+            # Scale the vector for visualization
+            arrow_length = 20  # Adjust for visibility
+            end_x = x + force_x * arrow_length
+            end_y = y + force_y * arrow_length
+
+            # Draw the arrow
+            pygame.draw.line(screen, WHITE, (x, y), (end_x, end_y), 1)
+            pygame.draw.circle(screen, WHITE, (int(end_x), int(end_y)), 2)
 
 
 def is_valid_number(value):
@@ -193,6 +222,7 @@ input_buffer = str(inputs[selected_input])
 paused = False
 particles = []
 dragging = False
+g_slider_dragging = False
 
 # Main loop
 running = True
@@ -241,6 +271,17 @@ while running:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left click
+                slider_rect = pygame.Rect(SIM_WIDTH + 10, 240, 180, 10)
+                handle_x = SIM_WIDTH + 10 + int((G - 0.1) / (5.0 - 0.1) * 180)
+                handle_rect = pygame.Rect(handle_x - 8, 240 - 8, 16, 26)  # Handle area
+                checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 500, 20, 20)
+                if checkbox_rect.collidepoint(event.pos):
+                    on_vector = not on_vector
+                if handle_rect.collidepoint(event.pos):
+                    g_slider_dragging = True
+                if slider_rect.collidepoint(event.pos):
+                    slider_value = (event.pos[0] - slider_rect.x) / slider_rect.width
+                    G = max(0.1, min(slider_value * (5.0 - 0.1) + 0.1, 5.0))
                 if preview_particle.is_clicked((mouse_x, mouse_y)):
                     dragging = True
                 for i in range(len(inputs)):
@@ -268,6 +309,7 @@ while running:
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 dragging = False
+                g_slider_dragging = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_DOWN:
                 selected_input: int = (selected_input + 1) % len(inputs)
@@ -314,10 +356,17 @@ while running:
         elif event.type == pygame.MOUSEWHEEL:
             inputs[3] = max(1, min(inputs[3] + event.y, 200))
 
+        elif event.type == pygame.MOUSEMOTION:
+            if g_slider_dragging:
+                # Adjust G based on mouse position
+                slider_rect = pygame.Rect(SIM_WIDTH + 10, 240, 180, 10)
+                relative_x = max(0, min(event.pos[0] - slider_rect.x, slider_rect.width))
+                G = 0.1 + (relative_x / slider_rect.width) * (5.0 - 0.1)
+
     # Update particles if not paused
     if not paused:
         for particle in particles:
-            particle.update(particles)
+            particle.update(particles,G)
 
     # Draw all particles
     for particle in particles:
@@ -337,11 +386,15 @@ while running:
                             math.sqrt(particle.radius ** 2 + other.radius ** 2)
                         )
                         particles.remove(other)
-    # Draw sidebar
-    draw_sidebar(
-        screen, inputs, selected_input, input_active, input_buffer, paused, fps
-    )
 
+    # Draw the vector field
+    if on_vector:
+        draw_vector_field(screen, particles, G, grid_spacing=50)
+    else:
+        pass
+
+    # Draw sidebar
+    draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, paused, fps, G)
     pygame.display.flip()
     clock.tick(60)
 
