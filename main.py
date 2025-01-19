@@ -156,7 +156,7 @@ def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, pau
     pygame.draw.rect(screen, BLACK, (vsslider_x, vsslider_y, vsslider_width, vsslider_height))
     pygame.draw.circle(screen, RED, (vsslider_value_x, vsslider_y + vsslider_height // 2), 8)
 
-    g_text = font.render(f"Vector Density: {grid_spacing}", True, BLACK)
+    g_text = font.render(f"Vector Field Density: {grid_spacing}", True, BLACK)
     screen.blit(g_text, (SIM_WIDTH + 20, vsslider_y + 20))
 
 
