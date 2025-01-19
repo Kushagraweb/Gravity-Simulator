@@ -184,6 +184,8 @@ def draw_sidebar(screen, inputs, selected_input, input_active, input_buffer, pau
                          (checkbox_rect.centerx, checkbox_rect.bottom - 4), 2)
         pygame.draw.line(screen, BLACK, (checkbox_rect.centerx, checkbox_rect.bottom - 4),
                          (checkbox_rect.right - 4, checkbox_rect.top + 4), 2)
+
+
     checkbox_label = font.render("Show Vector Field", True, BLACK)
     screen.blit(checkbox_label, (checkbox_rect.right + 10, checkbox_rect.top))
 
@@ -307,20 +309,20 @@ while running:
                 vshandle_x =SIM_WIDTH + 10 + int((grid_spacing - 10) / (100 - 10) * 180)
                 vshandle_rect = pygame.Rect(vshandle_x - 8, 290 - 8, 16, 26)  # Handle area
 
-                checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 500, 20, 20)
+                checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 550, 20, 20)
                 if checkbox_rect.collidepoint(event.pos):
                     on_vector = not on_vector
-                if handle_rect.collidepoint(event.pos):
+                elif handle_rect.collidepoint(event.pos):
                     g_slider_dragging = True
-                if vshandle_rect.collidepoint(event.pos):
+                elif vshandle_rect.collidepoint(event.pos):
                     vsslider_dragging = True
-                if slider_rect.collidepoint(event.pos):
+                elif slider_rect.collidepoint(event.pos):
                     slider_value = (event.pos[0] - slider_rect.x) / slider_rect.width
                     G = max(0.1, min(slider_value * (5.0 - 0.1) + 0.1, 5.0))
-                if vsslider_rect.collidepoint(event.pos):
+                elif vsslider_rect.collidepoint(event.pos):
                     vsslider_value = (event.pos[0] - vsslider_rect.x) / vsslider_rect.width
                     grid_spacing = max(10, min(vsslider_value * (100 - 10) + 10, 100))
-                if preview_particle.is_clicked((mouse_x, mouse_y)):
+                elif preview_particle.is_clicked((mouse_x, mouse_y)):
                     dragging = True
                 for i in range(len(inputs)):
                     input_rect = pygame.Rect(
