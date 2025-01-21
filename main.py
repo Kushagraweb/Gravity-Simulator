@@ -407,7 +407,7 @@ while running:
                 # Adjust vector spacing based on mouse position
                 vsslider_rect = pygame.Rect(SIM_WIDTH + 10, 290, 180, 10)
                 vsrelative_x = max(0, min(event.pos[0] - vsslider_rect.x, vsslider_rect.width))
-                grid_spacing = 10 + (vsrelative_x / vsslider_rect.width) * (100 - 10)
+                grid_spacing = int(10 + (vsrelative_x / vsslider_rect.width) * (100 - 10))
 
     # Update particles if not paused
     if not paused:
