@@ -5,7 +5,11 @@ import multiprocessing
 import db
 
 
+
+
+
 def main():
+
     # Initialize Pygame
     pygame.init()
 
@@ -30,6 +34,7 @@ def main():
     grid_spacing:int=50
     G=1
     on_vector=True
+    on_DB = False
     # Particle class
     class Particle:
         def __init__(self, x, y, mass, radius, color=None):
@@ -192,6 +197,22 @@ def main():
         checkbox_label = font.render("Show Vector Field", True, BLACK)
         screen.blit(checkbox_label, (checkbox_rect.right + 10, checkbox_rect.top))
 
+        #DB Button
+
+        db_color=(255,0,0)
+        if on_DB:
+            db_color=(205,0,0)
+        db_text=font.render("DB",True,WHITE)
+        db_rect=pygame.Rect(SIM_WIDTH + 10, 580, 45, 35)
+        pygame.draw.rect(screen, db_color, db_rect)
+        pygame.draw.rect(screen, WHITE, db_rect,2)
+        screen.blit(db_text, (db_rect.left+10, db_rect.top+10))
+
+
+
+
+
+
 
     def draw_vector_field(screen, particles, G, grid_spacing):
         for x in range(0, SIM_WIDTH, int(grid_spacing)):
@@ -293,7 +314,6 @@ def main():
         for event in pygame.event.get():
             while onetime == 0:
                 for i in range(len(inputs)):
-                    input_rect = pygame.Rect(SIM_WIDTH + 10, 40 + i * 40, 180, 30)
                     selected_input = i
                     input_active = True
                     input_buffer = str(inputs[selected_input])
@@ -303,7 +323,9 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
+
                 if event.button == 1:  # Left click
+                    db_rect = pygame.Rect(SIM_WIDTH + 10, 580, 45, 35)
                     slider_rect = pygame.Rect(SIM_WIDTH + 10, 240, 180, 10)
                     vsslider_rect = pygame.Rect(SIM_WIDTH + 10, 290, 180, 10)
                     handle_x = SIM_WIDTH + 10 + int((G - 0.1) / (5.0 - 0.1) * 180)
@@ -315,6 +337,12 @@ def main():
                     checkbox_rect = pygame.Rect(SIM_WIDTH + 10, 550, 20, 20)
                     if checkbox_rect.collidepoint(event.pos):
                         on_vector = not on_vector
+                    elif db_rect.collidepoint(event.pos):
+                        on_DB= not on_DB
+                        multiprocessing.Process(target=db.dbmain).start()
+
+
+
                     elif handle_rect.collidepoint(event.pos):
                         g_slider_dragging = True
                     elif vshandle_rect.collidepoint(event.pos):
@@ -447,8 +475,10 @@ def main():
         pygame.display.flip()
         clock.tick(60)
 
+
     pygame.quit()
 
 
 if __name__ == '__main__':
-    multiprocessing.Process(target=main).start()
+    main()
+
